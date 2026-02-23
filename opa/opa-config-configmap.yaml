@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-config
+  namespace: opa
+data:
+  opa-config.yaml: |
+    features:
+      http_send:
+        enabled: true
+
+    decision_logs:
+      console: true

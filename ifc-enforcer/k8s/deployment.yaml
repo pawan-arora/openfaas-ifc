@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ifc-enforcer
+  namespace: openfaas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ifc-enforcer
+  template:
+    metadata:
+      labels:
+        app: ifc-enforcer
+    spec:
+      containers:
+        - name: ifc-enforcer
+          image: pawanarora/ifc-enforcer:0.1.0
+          ports:
+            - containerPort: 8080

@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ifc-forward-auth
+  namespace: openfaas
+spec:
+  forwardAuth:
+    # address: http://opa.opa.svc.cluster.local:8181/v1/data/ifc/allow
+    address: http://ifc-enforcer.openfaas.svc.cluster.local/ifc/authorize
+    trustForwardHeader: true

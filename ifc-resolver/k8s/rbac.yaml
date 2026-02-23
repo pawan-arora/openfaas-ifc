@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ifc-resolver
+  namespace: openfaas
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ifc-resolver-read
+  namespace: openfaas-fn
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ifc-resolver-read-binding
+  namespace: openfaas-fn
+subjects:
+  - kind: ServiceAccount
+    name: ifc-resolver
+    namespace: openfaas
+roleRef:
+  kind: Role
+  name: ifc-resolver-read
+  apiGroup: rbac.authorization.k8s.io

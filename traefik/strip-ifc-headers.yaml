@@ -1,0 +1,9 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-ifc-headers
+  namespace: openfaas
+spec:
+  headers:
+    customRequestHeaders:
+      X-IFC-Subject: ""

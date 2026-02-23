@@ -1,0 +1,18 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: keycloak-jwt
+  namespace: openfaas
+spec:
+  plugin:
+    jwt:
+      Required: true
+      Alg: RS256
+      Issuer: http://keycloak.local/realms/openfaas
+      Keys:
+        - http://keycloak.auth.svc.cluster.local:8080/realms/openfaas/protocol/openid-connect/certs
+      PayloadFields:
+        - exp
+      JwtSources:
+        - type: bearer
+          key: Authorization

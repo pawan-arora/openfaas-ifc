@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policy
+  namespace: opa
+data:
+  ifc_enforce.rego: |
+    package http.authz
+
+    import rego.v1
+
+    default allow = false
+
+    # Define hierarchy: Higher number = Higher Clearance
+    level := {
+        "public": 0,
+        "internal": 1,
+        "confidential": 2
+    }
+
+    # Map Function names to Clearance Levels
+    function_labels := {
+        "public-function": "public",
+        "internal-function": "internal",
+        "confidential-function": "confidential"
+    }
+
+    # MAIN ALLOW RULE
+    allow if {
+        # 1. Get Subject Level (User)
+        sl := subject_level
+        print("SUBJECT LEVEL:", sl)
+
+        # 2. Get Target Level (Function)
+        tl := target_level
+        print("TARGET LEVEL:", tl)
+
+        # 3. Compare: Subject must be >= Target
+        sl >= tl
+    }
+
+    # LOGIC: Extract User Level from JWT
+    subject_level := lvl if {
+        claims := jwt_claims
+        clearance := claims.ifc_clearance
+        print("CLAIM ifc_clearance:", clearance)
+        
+        # Check if the clearance string exists in our level map
+        lvl := level[clearance]
+    }
+
+    # LOGIC: Extract Function Level from URL Path
+    target_level := lvl if {
+        p := input.request.path
+        print("REQUEST PATH:", p)
+
+        # Split path: /function/confidential-function -> ["", "function", "confidential-function"]
+        segments := split(trim(p, "/"), "/")
+        
+        # Grab the function name (index 1 based on your example)
+        fn := segments[1]
+        
+        # Resolve the label from the name
+        label := function_labels[fn]
+        
+        # Resolve the integer level from the label
+        lvl := level[label]
+    }
+
+    ############################
+    # JWT DECODING & PARSING
+    ############################
+
+    jwt_claims := claims if {
+        # Get the raw header value
+        auth := auth_header
+        
+        # Ensure it is a Bearer token (case-insensitive check)
+        startswith(lower(auth), "bearer ")
+        
+        # Split by space to safely extract the token part
+        # This is safer than trim_prefix which handles case strictly
+        parts := split(auth, " ")
+        count(parts) == 2
+        token := parts[1]
+        
+        print("JWT TOKEN EXTRACTED:", token)
+
+        # DECODE ONLY (Safe because Traefik already verified the signature)
+        # io.jwt.decode returns [header, payload, signature]
+        [_, claims, _] := io.jwt.decode(token)
+        
+        # Optional: Verify Issuer matches expected value
+        claims.iss == "http://keycloak.local/realms/openfaas"
+        
+        print("JWT CLAIMS DECODED:", claims)
+    }
+
+    ############################
+    # AUTH HEADER HELPER
+    ############################
+
+    auth_header := h if {
+        h := input.request.headers.Authorization
+    }
+
+    auth_header := h if {
+        h := input.request.headers.authorization
+    }
+
+

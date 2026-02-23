@@ -1,0 +1,6 @@
+features:
+  http_send:
+    enabled: true
+
+decision_logs:
+  console: true

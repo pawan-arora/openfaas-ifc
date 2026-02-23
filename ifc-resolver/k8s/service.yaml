@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifc-resolver
+  namespace: openfaas
+spec:
+  selector:
+    app: ifc-resolver
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

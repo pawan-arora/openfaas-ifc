@@ -1,0 +1,18 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: openfaas-api
+  namespace: openfaas
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`api.openfaas.local`) && (PathPrefix(`/function`) || PathPrefix(`/system`))
+    kind: Rule
+    middlewares:
+      - name: keycloak-jwt
+     # - name: strip-ifc-headers
+      - name: ifc-forward-auth
+    services:
+      - name: gateway
+        port: 8080

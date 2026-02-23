@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-mysql
+  namespace: auth
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: keycloak-mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-mysql
+  namespace: auth
+spec:
+  serviceName: keycloak-mysql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak-mysql
+  template:
+    metadata:
+      labels:
+        app: keycloak-mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+          - containerPort: 3306
+        envFrom:
+          - secretRef:
+              name: keycloak-db-secret
+        volumeMounts:
+          - name: mysql-data
+            mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi

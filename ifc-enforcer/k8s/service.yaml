@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifc-enforcer
+  namespace: openfaas
+spec:
+  selector:
+    app: ifc-enforcer
+  ports:
+    - port: 80
+      targetPort: 8080

@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ifc-resolver
+  namespace: openfaas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ifc-resolver
+  template:
+    metadata:
+      labels:
+        app: ifc-resolver
+    spec:
+      serviceAccountName: ifc-resolver
+      containers:
+        - name: ifc-resolver
+          image: pawanarora/ifc-resolver:0.1.0
+          ports:
+            - containerPort: 8000

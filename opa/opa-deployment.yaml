@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: opa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+    spec:
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:latest
+          args:
+            - run
+            - --server
+            - --addr=0.0.0.0:8181
+            - --watch
+            - --log-level=info
+            - --config-file=/config/opa-config.yaml
+            - /policies/ifc_enforce.rego
+          ports:
+            - containerPort: 8181
+          volumeMounts:
+            - name: opa-policy
+              mountPath: /policies/
+            - name: opa-config
+              mountPath: /config  
+      volumes:
+        - name: opa-policy
+          configMap:
+            name: opa-policy
+        - name: opa-config
+          configMap:
+            name: opa-config

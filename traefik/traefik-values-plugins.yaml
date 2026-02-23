@@ -1,0 +1,23 @@
+experimental:
+  plugins:
+    jwt:
+      moduleName: github.com/traefik-plugins/traefik-jwt-plugin
+      version: v0.7.1
+
+# additionalVolumeMounts:
+#   - name: plugins
+#     mountPath: /plugins-storage
+
+# additionalVolumes:
+#   - name: plugins
+#     emptyDir: {}
+
+providers:
+  kubernetesCRD: {}
+  kubernetesIngress: {}
+
+additionalArguments:
+  - "--log.level=INFO"
+  
+securityContext:
+  readOnlyRootFilesystem: false
