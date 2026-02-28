@@ -1,6 +1,6 @@
 # OpenFaaS IFC
 
-[cite_start]An advanced Information Flow Control (IFC) enforcement framework for OpenFaaS using Keycloak, Traefik, Open Policy Agent (OPA), and a custom Python pipeline orchestrator[cite: 6, 7].
+ An advanced Information Flow Control (IFC) enforcement framework for OpenFaaS using Keycloak, Traefik, Open Policy Agent (OPA), and a custom Python pipeline orchestrator[cite: 6, 7].
 
 ## Overview
 
@@ -22,10 +22,10 @@ The system is fully containerized and runs on Kubernetes, integrating the follow
 
 - **Keycloak (Auth):** Acts as the Identity Provider (IdP), embedding custom `ifc_clearance` claims and roles (`ifc_declassifier`) into standard JWTs.
 - **Traefik (Gateway):** Handles edge routing, acting as a reverse proxy that intercepts requests and passes them to the authorization middleware.
-- [cite_start]**IFC Enforcer:** A lightweight Flask microservice [cite: 2] [cite_start]that acts as the Traefik ForwardAuth middleware[cite: 1], securely passing request contexts to OPA.
+- **IFC Enforcer:** A lightweight Flask microservice [cite: 2]  that acts as the Traefik ForwardAuth middleware[cite: 1], securely passing request contexts to OPA.
 - **Open Policy Agent (OPA):** The decision engine. It evaluates Rego policies to ensure the subject's clearance level is mathematically greater than or equal to the target function's required clearance.
-- [cite_start]**IFC Resolver:** A FastAPI microservice [cite: 5] [cite_start]running on port 8000 [cite: 4] that OPA queries in real-time via `http.send`. It dynamically reads Kubernetes `ifc/label` annotations from OpenFaaS deployments, eliminating the need for hardcoded security policies.
-- [cite_start]**Custom Orchestrator:** A dedicated Flask application [cite: 6, 7] that executes function pipelines, conservatively upgrades pipeline sensitivity contexts, and provides a heavily audited endpoint for data declassification.
+-  **IFC Resolver:** A FastAPI microservice [cite: 5]  running on port 8000 [cite: 4] that OPA queries in real-time via `http.send`. It dynamically reads Kubernetes `ifc/label` annotations from OpenFaaS deployments, eliminating the need for hardcoded security policies.
+-  **Custom Orchestrator:** A dedicated Flask application [cite: 6, 7] that executes function pipelines, conservatively upgrades pipeline sensitivity contexts, and provides a heavily audited endpoint for data declassification.
 
 ---
 
