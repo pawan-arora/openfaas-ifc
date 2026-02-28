@@ -1,112 +1,69 @@
 # OpenFaaS IFC
 
-Information Flow Control (IFC) enforcement framework for OpenFaaS using Keycloak, Traefik, OPA, and a custom pipeline orchestrator.
+[cite_start]An advanced Information Flow Control (IFC) enforcement framework for OpenFaaS using Keycloak, Traefik, Open Policy Agent (OPA), and a custom Python pipeline orchestrator[cite: 6, 7].
 
 ## Overview
 
-This project explores how Information Flow Control (IFC) can be integrated into OpenFaaS to prevent unsafe information flows between serverless functions.
+This project explores how Information Flow Control (IFC) can be integrated into OpenFaaS to prevent unsafe information flows between serverless functions. 
 
-Traditional OpenFaaS security focuses on authentication and access control. This project extends the model by introducing:
+Traditional OpenFaaS security focuses heavily on boundary authentication and access control. This project extends that model by introducing a **Zero Trust Data Plane** that includes:
+- Dynamic security labels for functions via Kubernetes annotations (`ifc/label`).
+- User clearance levels embedded securely in Keycloak JWT tokens.
+- Real-time flow validation across function pipelines using OPA.
+- Controlled, cryptographically masked declassification support via Secure JSON Envelopes.
 
-- Security labels for functions
-- User clearance levels embedded in JWT tokens
-- Flow validation across function pipelines
-- Controlled declassification support
-
-The goal is to prevent accidental data leaks when composing FaaS functions.
+The primary goal is to prevent accidental data leaks and enforce strict data governance when composing distributed FaaS functions.
 
 ---
 
 ## Architecture
 
-The system integrates:
+The system is fully containerized and runs on Kubernetes, integrating the following core components:
 
-- **Keycloak** – Adds `ifc_clearance` to JWT tokens
-- **Traefik** – Handles authentication and routing
-- **OPA (Open Policy Agent)** – Enforces IFC policy at function level
-- **Custom Orchestrator** – Enforces IFC across pipelines
-
-High-level flow:
-
-User → Traefik → OPA → OpenFaaS Function  
-Pipeline → Orchestrator → Multiple Functions (with IFC enforcement)
+- **Keycloak (Auth):** Acts as the Identity Provider (IdP), embedding custom `ifc_clearance` claims and roles (`ifc_declassifier`) into standard JWTs.
+- **Traefik (Gateway):** Handles edge routing, acting as a reverse proxy that intercepts requests and passes them to the authorization middleware.
+- [cite_start]**IFC Enforcer:** A lightweight Flask microservice [cite: 2] [cite_start]that acts as the Traefik ForwardAuth middleware[cite: 1], securely passing request contexts to OPA.
+- **Open Policy Agent (OPA):** The decision engine. It evaluates Rego policies to ensure the subject's clearance level is mathematically greater than or equal to the target function's required clearance.
+- [cite_start]**IFC Resolver:** A FastAPI microservice [cite: 5] [cite_start]running on port 8000 [cite: 4] that OPA queries in real-time via `http.send`. It dynamically reads Kubernetes `ifc/label` annotations from OpenFaaS deployments, eliminating the need for hardcoded security policies.
+- [cite_start]**Custom Orchestrator:** A dedicated Flask application [cite: 6, 7] that executes function pipelines, conservatively upgrades pipeline sensitivity contexts, and provides a heavily audited endpoint for data declassification.
 
 ---
 
 ## Security Model
 
-Three security levels are defined:
+The system enforces strict mathematical information flow using defined security clearance levels:
 
-- `public`
-- `internal`
-- `confidential`
+* `0` - **Public**: Universally accessible data and functions.
+* `1` - **Internal**: Restricted to authenticated organizational users.
+* `2` - **Confidential**: Highly sensitive data requiring strict clearance to access or process.
 
-Rules enforced:
-
-- A user can only invoke functions at or below their clearance.
-- Pipelines are rejected if they would cause information to flow from higher to lower sensitivity without explicit declassification.
-- Declassification must be controlled and explicit.
+**Rules Enforced (No Read Up, No Write Down):**
+1. A user can only invoke functions at or below their personal Keycloak `ifc_clearance` level.
+2. Pipelines are automatically rejected if they attempt to flow data from a higher sensitivity context to a lower one without explicit, authorized declassification.
+3. Declassification is treated as a privileged action, requiring specific Role-Based Access Control (RBAC).
 
 ---
 
-## Example Scenario
+## Example Scenarios
 
 ### Without IFC
-A confidential function could accidentally send sensitive data to a public function.
+A developer mistakenly chains a `confidential` database lookup into a `public` logging function, silently leaking sensitive financial data to an insecure endpoint.
 
 ### With IFC Enabled
-The system rejects such pipelines automatically.
+The Custom Orchestrator tracks the pipeline's context. Once the `confidential` function executes, the pipeline's context is permanently upgraded to `confidential`. When the orchestrator attempts to pass that data to the `public` logging function, OPA intercepts the Traefik request and instantly returns `403 Forbidden`.
 
-Example rejected pipeline:
-
-public → internal → confidential → public
-
-Example allowed pipeline:
-
-public → internal → confidential
-
-Example controlled declassification:
-
-confidential → aggregate-report → public
+* **Allowed Pipeline (Upward Flow):** `public` → `internal` → `confidential`
+* **Rejected Pipeline (Downward Leak):** `public` → `internal` → `confidential` → ❌ `public`
 
 ---
 
 ## Controlled Declassification
 
-Certain functions (e.g., aggregation functions) are permitted to safely downgrade classification after transforming sensitive data into non-sensitive summaries.
+To safely lower a classification level (e.g., generating a public summary from confidential data), the system utilizes **Secure JSON Envelopes**. 
 
-This demonstrates practical IFC enforcement in serverless environments.
-
----
-
-## Evaluation
-
-The system is evaluated by comparing:
-
-- IFC disabled vs IFC enabled
-- Authorized vs unauthorized users
-- Valid vs invalid pipelines
-- Controlled declassification behavior
-
----
-
-## Running the System
-
-1. Deploy Keycloak realm with `ifc_clearance`
-2. Apply Traefik JWT middleware
-3. Deploy OPA with `ifc_enforce.rego`
-4. Deploy labelled OpenFaaS functions
-5. Run the orchestrator
-6. Test using provided example pipelines
-
----
-
-## Research Context
-
-This prototype demonstrates that Information Flow Control can be practically integrated into serverless platforms like OpenFaaS, extending beyond traditional access control to protect against unintended data flows in composed function pipelines.
-
----
-
-## License
-
-Research prototype – Academic use.
+Functions wrap their outputs in metadata:
+```json
+{
+    "ifc_metadata": { "classification": "confidential", "encrypted": true },
+    "payload": "U2VjcmV0IEZpbmFuY2lhbCBEYXRh"
+}
