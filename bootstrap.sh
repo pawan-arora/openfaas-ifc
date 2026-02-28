@@ -1,36 +1,45 @@
 #!/usr/bin/env bash
 set -e
 
-echo "▶ Waiting for Kubernetes..."
+echo "▶ 1/9 Waiting for Kubernetes cluster to be ready..."
 until kubectl get nodes >/dev/null 2>&1; do
   sleep 2
 done
+echo "✔ Kubernetes is ready."
 
-echo "▶ Applying namespaces"
+echo "▶ 2/9 Applying namespaces..."
 kubectl apply -f namespaces/
 
-echo "▶ Applying secrets"
+echo "▶ 3/9 Applying secrets..."
 kubectl apply -f secrets/
 
-echo "▶ Deploying Keycloak"
+echo "▶ 4/9 Deploying Traefik (Gateway/Ingress)..."
+# Deployed early so its Custom Resource Definitions (CRDs) like IngressRoute are available
+helm upgrade --install traefik ./traefik \
+  -n traefik --create-namespace
+echo "⏳ Waiting for Traefik CRDs to register..."
+sleep 5 
+
+echo "▶ 5/9 Deploying Keycloak (Auth)..."
 helm upgrade --install keycloak ./keycloak \
   -n auth --create-namespace
 
-echo "▶ Deploying OAuth2 Proxy"
+echo "▶ 6/9 Deploying OAuth2 Proxy..."
 kubectl apply -f oauth2-proxy/
 
-echo "▶ Deploying OPA"
+echo "▶ 7/9 Deploying Open Policy Agent (OPA)..."
 kubectl apply -f opa/
 
-echo "▶ Deploying Traefik"
-helm upgrade --install traefik ./traefik \
-  -n traefik --create-namespace
-
-echo "▶ Deploying OpenFaaS"
+echo "▶ 8/9 Deploying OpenFaaS Core & Enforcer/Resolver..."
 helm upgrade --install openfaas ./openfaas \
   -n openfaas --create-namespace
 
-echo "▶ Applying ingress and middleware"
+echo "▶ 9/9 Applying Ingress and Traefik Middleware..."
 kubectl apply -f ingress/
 
-echo "✅ Cluster bootstrap complete"
+# Optionally deploy the Orchestrator here if you have a folder for it
+# echo "▶ Deploying Orchestrator..."
+# kubectl apply -f orchestrator/k8s/
+
+echo "✅ Cluster bootstrap complete!"
+echo "Run 'kubectl get pods -A -w' to watch the pods spin up."

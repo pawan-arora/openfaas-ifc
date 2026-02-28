@@ -15,7 +15,8 @@ data:
     level := {
         "public": 0,
         "internal": 1,
-        "confidential": 2
+        "confidential": 2,
+        "declassify": 2
     }
 
     # Map Function names to Clearance Levels
@@ -51,19 +52,27 @@ data:
 
     # LOGIC: Extract Function Level from URL Path
     target_level := lvl if {
-        p := input.request.path
-        print("REQUEST PATH:", p)
 
+        p := input.request.path
+        
         # Split path: /function/confidential-function -> ["", "function", "confidential-function"]
         segments := split(trim(p, "/"), "/")
-        
-        # Grab the function name (index 1 based on your example)
         fn := segments[1]
         
-        # Resolve the label from the name
-        label := function_labels[fn]
+        # Call the ifc-resolver service inside the cluster
+        resolver_url := sprintf("http://ifc-resolver.openfaas.svc.cluster.local:8000/resolve?function=%v", [fn])
+        response := http.send({
+            "method": "GET",
+            "url": resolver_url,
+            "timeout": "2s"
+        })
         
-        # Resolve the integer level from the label
+        # Ensure the resolver succeeded
+        response.status_code == 200
+
+        # Extract the label from the JSON response and map it to an integer level
+        label := response.body.ifc_label
+        print("DYNAMIC RESOLVER RETURNED LABEL:", label)
         lvl := level[label]
     }
 

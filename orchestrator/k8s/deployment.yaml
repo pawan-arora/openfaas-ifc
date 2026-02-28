@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: orchestrator
-          image: pawanarora/ifc-orchestrator:0.1.1
+          image: pawanarora/ifc-orchestrator:0.1.4
           ports:
             - containerPort: 5000
