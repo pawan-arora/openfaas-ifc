@@ -7,12 +7,21 @@ spec:
   entryPoints:
     - web
   routes:
-  - match: Host(`api.openfaas.local`) && (PathPrefix(`/function`) || PathPrefix(`/system`))
+  # Route 1: Apply strict OPA Information Flow Control to all Function Invocations
+  - match: (Host(`api.openfaas.local`) || Host(`openfaas.local`)) && PathPrefix(`/function`)
     kind: Rule
     middlewares:
       - name: keycloak-jwt
-     # - name: strip-ifc-headers
       - name: ifc-forward-auth
+    services:
+      - name: gateway
+        port: 8080
+        
+  # Route 2: Allow standard API system checks (JWT required, but no IFC block)
+  - match: Host(`api.openfaas.local`) && PathPrefix(`/system`)
+    kind: Rule
+    middlewares:
+      - name: keycloak-jwt
     services:
       - name: gateway
         port: 8080

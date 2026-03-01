@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openfaas-ui-function-intercept
+  namespace: openfaas
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://oauth2-proxy.auth.svc.cluster.local/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "http://openfaas.local/oauth2/start?rd=$escaped_request_uri"
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization"
+    
+    # FIX 1: Force the auth check to use GET, preventing 403s on UI invocations
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    
+    # FIX 2: Preserve the original domain so Traefik applies the OPA middleware
+    nginx.ingress.kubernetes.io/upstream-vhost: "openfaas.local"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: openfaas.local
+    http:
+      paths:
+      - path: /function
+        pathType: Prefix
+        backend:
+          service:
+            name: traefik-bridge
+            port:
+              number: 80
